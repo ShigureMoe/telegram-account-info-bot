@@ -54,21 +54,36 @@ def get_command(update: Update, context: CallbackContext) -> None:
         update.message.reply_text(help_messages)
         return None
     try:
-        server = command.split(" ")[1]
-        if server in server_list:
-            if update.message.reply_to_message:
-                user_id = update.message.reply_to_message.from_user.id
-                game_id = ''
-                for x in mycol.find({"user_id": user_id, "game_zone": server}):
-                    game_id = x['game_id']
-                if game_id:
-                    update.message.reply_text("%s: %s" % (server, game_id))
+        if len(command.split(" ")) == 2:
+            server = command.split(" ")[1]
+            if server in server_list:
+                if update.message.reply_to_message:
+                    user_id = update.message.reply_to_message.from_user.id
+                    game_id = ''
+                    for x in mycol.find({"user_id": user_id, "game_zone": server}):
+                        game_id = x['game_id']
+                    if game_id:
+                        update.message.reply_text("%s: %s" % (server, game_id))
+                    else:
+                        update.message.reply_text("未绑定帐号")
                 else:
+                    update.message.reply_text(help_messages)
+            else:
+                update.message.reply_text("不支持的区服")
+        else:
+            return_message = ''
+            if update.message.reply_to_message:
+                for server in server_list:
+                    user_id = update.message.reply_to_message.from_user.id
+                    for x in mycol.find({"user_id": user_id, "game_zone": server}):
+                        game_id = x['game_id']
+                        return_message = return_message + "%s: %s" % (server, game_id) + '\n'
+                if not return_message:
                     update.message.reply_text("未绑定帐号")
+                    return None
+                update.message.reply_text(return_message)
             else:
                 update.message.reply_text(help_messages)
-        else:
-            update.message.reply_text("不支持的区服")
     except Exception as e:
         logger.error(e)
         update.message.reply_text('内部错误')
@@ -85,7 +100,7 @@ def add_command(update: Update, context: CallbackContext) -> None:
             myquery = {"user_id": user_id, "game_zone": server}
             new_record = {"user_id": user_id, "game_zone": server, "game_id": game_id}
 
-            for x in mycol.find():
+            for x in mycol.find(myquery):
                 old_game_id = x['game_id']
             if old_game_id:
                 mycol.delete_many(myquery)
